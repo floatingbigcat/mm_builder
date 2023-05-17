@@ -5,91 +5,131 @@ import re
 import pandas as pd
 import xml.etree.ElementTree as ET
 from tqdm import tqdm
+from bs4 import BeautifulSoup
+from html2text import html2text as htt
+import wikitextparser as wtp
 
-add_md = False
-add_html = False
-# Set the input file path
-input_file= '/home/lfsm/datasets/wiki_ja/jawiki-20230401-pages-articles-multistream1.xml-p1p114794'
-# init dataframe
-data = {
-    'xml': [],
-    'markdown': [],
-    'html': [],
-    'pairs': []
-}
-df = pd.DataFrame(data)
+import re
+import argparse
 
-# Parse the XML file
-print('start reading file')
-tree = ET.parse(input_file)
-print('finish read file!')
-root = tree.getroot()
+ja_patterns = [r'\[\[:(?:ファイル|画像):(.*?)\|',r'\[\[(?:ファイル|画像):(.*?)\|'] 
+en_patterns = [r'\[\[(?:File):(.*?)\|'] 
 
-i=0
-# Loop over each page in the XML file
-for page in tqdm(root.iter('{http://www.mediawiki.org/xml/export-0.10/}page')):
-    
-    # i+=1
-    # if i > 1000:
-    #     df.to_parquet('test.parquet')
-    #     break
-    
-    # Get the page title and content
-    title = page.find('{http://www.mediawiki.org/xml/export-0.10/}title').text
-    content = page.find('{http://www.mediawiki.org/xml/export-0.10/}revision/{http://www.mediawiki.org/xml/export-0.10/}text').text
-    
-    # find image_file_names and the desired pattern
-    patterns = [r'\[\[:(?:ファイル|画像):(.*?)\|',r'\[\[(?:ファイル|画像):(.*?)\|'] 
-    for pattern in patterns:
-        image_file_names = list(set(re.findall(pattern, content))) 
-        if len(image_file_names) != 0:
-            break
-    
-    # splite content along img_name, and remove r
-    splite_content = list(set(re.split(pattern, content)))
+def get_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--input",
+        "-i",
+        help="path to articles xml",
+        default="enwiki-20230401-pages-articles-multistream.xml",
+    )
 
-    # replace img_name with label ###img#i### and record
-    pairs = []
-    idx = 0
-    for i in range(len(splite_content)):
-        if splite_content[i] in image_file_names:
-            label = f'###img#{idx}###' 
-            pairs.append([label, splite_content[i]])
-            splite_content[i] = label
-            idx += 1 
-    
-    md_content = []
-    if add_md:
-        # get markdown format
-        def wiki2md(content):
-            try:
-                return pypandoc.convert_text(content, format='mediawiki', to='gfm')
-            except:
-                return content
-        for item in splite_content:
-            if not item.startswith('###img#'): 
-                item = wiki2md(item) 
-            md_content.append(item)
-    html_content = []
-    if add_html:    
-        # get html format
-        def wiki2html(content):
-            try:
-                return pypandoc.convert_text(content, format='mediawiki', to='html')
-            except:
-                return content
-        for item in splite_content:
-            if not item.startswith('###img#'): 
-                item = wiki2html(item) 
-            html_content.append(item)
+    parser.add_argument(
+        "--outdir",
+        "-o",
+        help="dir path to the transformed file",
+        default="/home/lfsm/code/mm_builder/dataset/wiki_en/interleaved",
+    )
 
-    # add row to df
-    # import pdb;pdb.set_trace()
-    new_row = {'xml':splite_content , 'markdown': md_content, 'html': html_content, 'pairs': pairs}
-    # new_row_df = pd.DataFrame(new_row, index=[0])
-    # new_row_df = pd.Series(new_row)
-    df = df.append(new_row, ignore_index=True)
-    # df = pd.concat([df, new_row_df],axis=0,ignore_index=True)
-    
-df.to_parquet('../data/wiki_itl.parquet')
+    parser.add_argument(
+        "--lang",
+        "-l",
+        help="which language: ja/en",
+    )
 
+    args = parser.parse_args()
+    return args
+
+def wiki2md(content):
+    try:
+        return pypandoc.convert_text(content, format='mediawiki', to='gfm')
+    except:
+        return content
+    
+def wiki2html(content):
+    try:
+        return pypandoc.convert_text(content, format='mediawiki', to='html')
+    except:
+        return content
+
+def dewiki(text):
+    text = wtp.parse(text).plain_text()  # wiki to plaintext 
+    text = htt(text)  # remove any HTML
+    text = text.replace('\\n',' ')  # replace newlines
+    text = re.sub('\s+', ' ', text)  # replace excess whitespace
+    return text
+
+def wiki2itl(input_file, patterns):
+    # init dataframe
+    data = {
+        'texts': [],
+        # 'markdown': [],
+        # 'html': [],
+        'images': []
+    }
+    df = pd.DataFrame(data)
+    # Parse the XML file
+    print('start reading file')
+    tree = ET.parse(input_file)
+    root = tree.getroot()
+    print('Loop on each page now!')
+    i=0
+    # Loop over each page in the XML file
+    for page in tqdm(root.iter('{http://www.mediawiki.org/xml/export-0.10/}page')):
+        # Get the page title and content
+        title = page.find('{http://www.mediawiki.org/xml/export-0.10/}title').text
+        content = page.find('{http://www.mediawiki.org/xml/export-0.10/}revision/{http://www.mediawiki.org/xml/export-0.10/}text').text
+        # find image_file_names and the desired pattern
+        if len(content) < 10:
+            continue
+        try:
+            for pattern in patterns:
+                image_file_names = list(re.findall(pattern, content))
+                if len(image_file_names) != 0:
+                    break
+            # splite content along img_name, and remove r
+            splite_content = list(re.split(pattern, content))
+            images = [] 
+            texts = []
+            idx = 0
+            img_idx = 0
+            for item in splite_content:
+                if item in image_file_names:
+                    meta = dict({
+                        'image_index':img_idx,
+                        'index':idx,
+                        'url':item
+                    })
+                    images.append(meta)
+                    img_idx += 1
+                else:
+                    item = dewiki(item)
+                    if len(item) < 5:
+                        continue
+                    texts.append(item)
+                    idx += 1
+            # add row to df
+            new_row = {'texts':texts , 
+                    'images': images}
+            df = df.append(new_row, ignore_index=True)
+        except Exception as e:
+            print(f"Get some error: {str(e)}, process continue")
+            continue
+    return df
+
+def main():
+    args = get_parser()
+    out_file_name = args.input.replace('.xml', '.parquet')
+    out_file = os.path.join(args.outdir,out_file_name)
+    if args.lang == 'ja':
+        patterns = ja_patterns
+    elif args.lang == 'en':
+        patterns = en_patterns
+    else:
+        raise ValueError(f'{args.lang} is not supported')
+    df = wiki2itl(input_file=args.input,patterns=patterns)
+    df.to_parquet(out_file) 
+    
+
+if __name__ == '__main__':
+    main()

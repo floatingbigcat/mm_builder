@@ -2,6 +2,8 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import multiprocessing as mp
+import re
+import argparse
 
 def get_response_from_url(url, timeout=2):
     try:
@@ -16,7 +18,7 @@ def get_response_from_url(url, timeout=2):
 def name2url(name):
     """Get url from pure file name"""
     if len(name) == 0:
-        return name
+        return '' 
     
     #  Send a GET request to potiental URL
     bases = ['https://ja.wikipedia.org/wiki/ファイル:',
@@ -26,46 +28,54 @@ def name2url(name):
         if response == None:
             continue
     if response == None:
-        return name
+        return ''
     
     # Get image_link from the valid url
     soup = BeautifulSoup(response.content, "html.parser")
     full_image_div = soup.find("div", class_="fullImageLink")
     image_link = full_image_div.find("a")
-    image_url = image_link["href"]
+    try:
+        image_url = image_link["href"]
+        return image_url
+    except:
+        return ''
 
-    return image_url
-
-def mp_name2url(pair):
-    label,name = pair
+def mp_name2url(images):
+    name = images['url']
     name = name.replace(" ", "_")
     url = name2url(name)
-    return label,url
+    images['url'] = url
+    return images
 
-if __name__ == '__main__':
-    # df = pd.read_parquet('../data/names.parquet')
-    df = pd.read_parquet('../data/wiki_itl_0.parquet')
+def get_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--input",
+        "-i",
+        help="path to articles xml",
+        default="enwiki-20230401-pages-articles-multistream.xml",
+    )
+    args = parser.parse_args()
+    return args
 
-    i = 0
-    # replace " " with "_"
-    for index, pairs in df['pairs'].items():
-        
-        # i += 1
-        # if i>20:
-        #     break
-        
-        if pairs is None:
+def main():
+    args = get_parser()
+    input_file = args.input
+    df = pd.read_parquet(input_file)
+    for index, images in df['images'].items():
+        if images is None:
             continue
-        
-        # get new pairs with url in mp.pool
-        new_pairs = []
+        new_images = []
         pool = mp.Pool()
-        new_pairs = pool.map(mp_name2url,pairs)
+        new_images = pool.map(mp_name2url,images)
+        #list2dict
         # Close the pool to free resources
         pool.close()
         pool.join() 
-     
         # change the df   
-        df.loc[index, 'pairs'] = [new_pairs]
+        df.loc[index, 'images'] = [new_images]
+    df.to_parquet(input_file)
        
- 
+       
+if __name__ == '__main__':
+    main()
