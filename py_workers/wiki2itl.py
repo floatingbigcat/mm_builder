@@ -5,11 +5,12 @@ import re
 import pandas as pd
 import xml.etree.ElementTree as ET
 from tqdm import tqdm
-from bs4 import BeautifulSoup
 from html2text import html2text as htt
 import wikitextparser as wtp
 
-import re
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import argparse
 
 ja_patterns = [r'\[\[:(?:ファイル|画像):(.*?)\|',r'\[\[(?:ファイル|画像):(.*?)\|'] 
@@ -73,15 +74,13 @@ def wiki2itl(input_file, patterns):
     tree = ET.parse(input_file)
     root = tree.getroot()
     print('Loop on each page now!')
-    i=0
     # Loop over each page in the XML file
+
     for page in tqdm(root.iter('{http://www.mediawiki.org/xml/export-0.10/}page')):
         # Get the page title and content
         title = page.find('{http://www.mediawiki.org/xml/export-0.10/}title').text
         content = page.find('{http://www.mediawiki.org/xml/export-0.10/}revision/{http://www.mediawiki.org/xml/export-0.10/}text').text
         # find image_file_names and the desired pattern
-        if len(content) < 10:
-            continue
         try:
             for pattern in patterns:
                 image_file_names = list(re.findall(pattern, content))
@@ -119,7 +118,7 @@ def wiki2itl(input_file, patterns):
 
 def main():
     args = get_parser()
-    out_file_name = args.input.replace('.xml', '.parquet')
+    out_file_name = os.path.basename(args.input).replace('.xml', '.parquet')
     out_file = os.path.join(args.outdir,out_file_name)
     if args.lang == 'ja':
         patterns = ja_patterns

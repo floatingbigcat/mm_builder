@@ -63,7 +63,7 @@ def main():
     input_file = args.input
     df = pd.read_parquet(input_file)
     for index, images in df['images'].items():
-        if images is None:
+        if images.size == 0:
             continue
         new_images = []
         pool = mp.Pool()
@@ -73,7 +73,7 @@ def main():
         pool.close()
         pool.join() 
         # change the df   
-        df.loc[index, 'images'] = [new_images]
+        df.loc[index, 'images'] = new_images
     df.to_parquet(input_file)
        
        
