@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 import multiprocessing as mp
 import re
 import argparse
+import os
+from tqdm import tqdm
 
 def get_response_from_url(url, timeout=2):
     try:
@@ -55,27 +57,50 @@ def get_parser():
         help="path to articles xml",
         default="enwiki-20230401-pages-articles-multistream.xml",
     )
+    parser.add_argument(
+        "--outdir",
+        "-o",
+        help="dir path to the transformed file",
+        default="/home/lfsm/code/mm_builder/dataset/wiki_en/interleaved",
+    )
     args = parser.parse_args()
     return args
 
 def main():
     args = get_parser()
     input_file = args.input
-    df = pd.read_parquet(input_file)
-    for index, images in df['images'].items():
-        if images.size == 0:
+    name = os.path.basename(input_file)
+    if '.csv' in name:
+        df = pd.read_csv(input_file)
+        name = name.replace('.csv','.parquet')
+    elif '.parquet' in name
+        df = pd.read_parquet(input_file)
+    else:
+        raise ValueError ('Check input_file format')
+    out_file = os.path.join(args.outdir,name)
+    
+    for index, images in tqdm(df['images'].items(),desc=f"Works in {input_file} now"):
+        try:
+            if images.size == 0:
+                continue
+            new_images = []
+            pool = mp.Pool()
+            new_images = pool.map(mp_name2url,images)
+            # Close the pool to free resources
+            pool.close()
+            pool.join() 
+            # change the df   
+            df.loc[index, 'images'] = new_images
+        except Exception as e:
+            print(f'get error {e} but continue')
             continue
-        new_images = []
-        pool = mp.Pool()
-        new_images = pool.map(mp_name2url,images)
-        #list2dict
-        # Close the pool to free resources
-        pool.close()
-        pool.join() 
-        # change the df   
-        df.loc[index, 'images'] = new_images
-    df.to_parquet(input_file)
-       
+    print('start saving file now')
+    try:
+        print(f'saving {out_file}')
+        df.to_parquet(out_file)
+    except Exception as e:
+        print(f'get error {e} to save parquet file, try on csv now')
+        df.to_csv(out_file.replace('parquet','csv'))
        
 if __name__ == '__main__':
     main()

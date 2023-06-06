@@ -127,8 +127,11 @@ def main():
     else:
         raise ValueError(f'{args.lang} is not supported')
     df = wiki2itl(input_file=args.input,patterns=patterns)
-    df.to_parquet(out_file) 
-    
+    try:
+        df.to_parquet(out_file, errors='replace') 
+    except Exception as e:
+        print(f'{e} occurs when saving parquet, trying to save into csv now')
+        df.to_csv(out_file.replace('.parquet','.csv'), errors='replace') 
 
 if __name__ == '__main__':
     main()

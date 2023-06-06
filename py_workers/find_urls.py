@@ -13,11 +13,15 @@ def get_response_from_url(url, timeout=2):
     except requests.exceptions.RequestException:
         return None
 
-url = 'https://dumps.wikimedia.org/jawiki/20230501/'
+# url = 'https://dumps.wikimedia.org/jawiki/20230501/'
+url = 'https://huggingface.co/datasets/lfsm/multimodal_wiki/tree/main'
+
 response = get_response_from_url(url) 
 soup = BeautifulSoup(response.content, "html.parser")
 download_links = soup.find_all("a")
 for link in download_links:
-    if link['href'].startswith("/jawiki/20230501/jawiki-20230501-pages-articles-multistream"):
-        if not link['href'].startswith("/jawiki/20230501/jawiki-20230501-pages-articles-multistream-index"): 
-            print("https://dumps.wikimedia.org/"+link['href'])
+    # if link['href'].startswith("/jawiki/20230501/jawiki-20230501-pages-articles-multistream"):
+    #     if not link['href'].startswith("/jawiki/20230501/jawiki-20230501-pages-articles-multistream-index"): 
+    #         print("https://dumps.wikimedia.org/"+link['href'])
+    if link['href'].startswith("/datasets/lfsm/multimodal_wiki/resolve/main/enwiki"):
+        print("https://huggingface.co"+link['href'])
