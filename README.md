@@ -35,6 +35,11 @@ you can download the dump file from the wiki website, or
 cd your_dump_dir
 wget -i ./data/en_urls.txt
 ```
+### Uncompress the dump file
+modify path in unzip.sh and run
+```
+bash unzip.sh
+```
 
 ### Convert dump file into interleaved format
 The wiki dump file don't contain image url address, in this step, we will extract all the image name from each article of dump files into "images" columns and spilte text of each article by images.
