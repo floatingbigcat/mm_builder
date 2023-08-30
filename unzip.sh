@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Specify the folder path
-folder_path="/home/lfsm/code/mm_builder/dataset/wiki/en/dump"
+folder_path="your_dump_path"
 
 # Iterate over each file in the folder
 for file in "$folder_path"/*.bz2; do
