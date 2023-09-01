@@ -13,7 +13,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import argparse
 
-ja_patterns = [r'\[\[:(?:ファイル|画像):(.*?)\|',r'\[\[(?:ファイル|画像):(.*?)\|'] 
+ja_patterns = [r'\[\[:(?:ファイル|画像):(.*?)\|',r'\[\[(?:ファイル|画像):(.*?)\|', r'\[\[:(?:ファイル|画像):(.*?)\]\]'] 
 en_patterns = [r'\[\[(?:File):(.*?)\|'] 
 
 def get_parser():
@@ -60,6 +60,10 @@ def dewiki(text):
     text = re.sub('\s+', ' ', text)  # replace excess whitespace
     return text
 
+def remove_subset(string):
+    cleaned_string = re.sub(r'thumb\|.*?\]\]', '', string)
+    return cleaned_string
+
 def wiki2itl(input_file, patterns):
     # init dataframe
     data = {
@@ -74,8 +78,6 @@ def wiki2itl(input_file, patterns):
     tree = ET.parse(input_file)
     root = tree.getroot()
     print('Loop on each page now!')
-    # Loop over each page in the XML file
-
     for page in tqdm(root.iter('{http://www.mediawiki.org/xml/export-0.10/}page')):
         # Get the page title and content
         title = page.find('{http://www.mediawiki.org/xml/export-0.10/}title').text
@@ -86,7 +88,7 @@ def wiki2itl(input_file, patterns):
                 image_file_names = list(re.findall(pattern, content))
                 if len(image_file_names) != 0:
                     break
-            # splite content along img_name, and remove r
+            # splite content along img_name
             splite_content = list(re.split(pattern, content))
             images = [] 
             texts = []
@@ -128,10 +130,10 @@ def main():
         raise ValueError(f'{args.lang} is not supported')
     df = wiki2itl(input_file=args.input,patterns=patterns)
     try:
-        df.to_parquet(out_file, errors='replace') 
+        df.to_parquet(out_file, engine="pyarrow") 
     except Exception as e:
-        print(f'{e} occurs when saving parquet, trying to save into csv now')
-        df.to_csv(out_file.replace('.parquet','.csv'), errors='replace') 
+        print(f'{e} occurs when saving parquet, trying to save into json now')
+        df.to_json(out_file.replace('.parquet','.json'))
 
 if __name__ == '__main__':
     main()
