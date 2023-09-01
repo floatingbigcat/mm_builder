@@ -13,8 +13,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import argparse
 
-ja_patterns = [r'\[\[:(?:ファイル|画像):(.*?)\|',r'\[\[(?:ファイル|画像):(.*?)\|'] 
-en_patterns = [r'\[\[(?:File):(.*?)\|'] 
+ja_patterns = [r'\[\[:?(?:ファイル|画像):?(.*?)(?:\||\]).*?\]\]']
+en_patterns = [r'\[\[(?:File):(.*?)\|.*?\]\]']
 
 def get_parser():
     parser = argparse.ArgumentParser()
