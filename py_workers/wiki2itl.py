@@ -15,6 +15,7 @@ import argparse
 
 ja_patterns = [r'\[\[:?(?:ファイル|画像):(.*?)(?:\||\]\])'] 
 en_patterns = [r'\[\[(?:File):(.*?)\|'] 
+zh_patterns = [r'\[\[Image:(.*?)\|']
 
 def get_parser():
     parser = argparse.ArgumentParser()
@@ -35,7 +36,7 @@ def get_parser():
     parser.add_argument(
         "--lang",
         "-l",
-        help="which language: ja/en",
+        help="which language: ja/en/zh",
     )
 
     args = parser.parse_args()
@@ -126,6 +127,8 @@ def main():
         patterns = ja_patterns
     elif args.lang == 'en':
         patterns = en_patterns
+    elif args.lang == 'zh':
+        patterns = zh_patterns
     else:
         raise ValueError(f'{args.lang} is not supported')
     df = wiki2itl(input_file=args.input,patterns=patterns)
