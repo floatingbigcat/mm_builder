@@ -59,6 +59,7 @@ def dewiki(text):
     text = htt(text)  # remove any HTML
     text = text.replace('\\n',' ')  # replace newlines
     text = re.sub('\s+', ' ', text)  # replace excess whitespace
+    text = re.sub(r'^[^\[\]]*?\]\]', '', text)
     return text
 
 def remove_subset(string):
