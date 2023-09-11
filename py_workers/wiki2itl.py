@@ -1,4 +1,3 @@
-
 import pypandoc
 import os
 import re
@@ -65,7 +64,7 @@ def remove_subset(string):
     cleaned_string = re.sub(r'thumb\|.*?\]\]', '', string)
     return cleaned_string
 
-def wiki2itl(input_file, pattern):
+def wiki2itl(input_file):
     # init dataframe
     data = {
         'texts': [],
@@ -121,10 +120,10 @@ def main():
     out_file_name = os.path.basename(args.input).replace('.xml', '.parquet')
     out_file = os.path.join(args.outdir,out_file_name)
     if args.lang in ['ja','en']:
-        patterns = pattern
+        pass
     else:
         raise ValueError(f'{args.lang} is not supported')
-    df = wiki2itl(input_file=args.input,patterns=patterns)
+    df = wiki2itl(input_file=args.input)
     try:
         df.to_parquet(out_file, engine="pyarrow") 
     except Exception as e:
