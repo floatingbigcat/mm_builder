@@ -13,8 +13,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import argparse
 
-ja_patterns = [r'\[\[:?(?:ファイル|画像):(.*?)(?:\||\]\])'] 
-en_patterns = [r'\[\[(?:File):(.*?)\|'] 
+pattern = r'\[\[:?(?:ファイル|画像|File):(.*?)(?:\||\]\])' 
 
 def get_parser():
     parser = argparse.ArgumentParser()
@@ -64,7 +63,7 @@ def remove_subset(string):
     cleaned_string = re.sub(r'thumb\|.*?\]\]', '', string)
     return cleaned_string
 
-def wiki2itl(input_file, patterns):
+def wiki2itl(input_file, pattern):
     # init dataframe
     data = {
         'texts': [],
@@ -84,10 +83,7 @@ def wiki2itl(input_file, patterns):
         content = page.find('{http://www.mediawiki.org/xml/export-0.10/}revision/{http://www.mediawiki.org/xml/export-0.10/}text').text
         # find image_file_names and the desired pattern
         try:
-            for pattern in patterns:
-                image_file_names = list(re.findall(pattern, content))
-                if len(image_file_names) != 0:
-                    break
+            image_file_names = list(re.findall(pattern, content))
             # splite content along img_name
             splite_content = list(re.split(pattern, content))
             images = [] 
@@ -122,10 +118,8 @@ def main():
     args = get_parser()
     out_file_name = os.path.basename(args.input).replace('.xml', '.parquet')
     out_file = os.path.join(args.outdir,out_file_name)
-    if args.lang == 'ja':
-        patterns = ja_patterns
-    elif args.lang == 'en':
-        patterns = en_patterns
+    if args.lang in ['ja','en']:
+        patterns = pattern
     else:
         raise ValueError(f'{args.lang} is not supported')
     df = wiki2itl(input_file=args.input,patterns=patterns)
