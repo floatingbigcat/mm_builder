@@ -1,5 +1,0 @@
-tqdm
-pandas
-html2text
-wikitextparser
-beautifulsoup4
