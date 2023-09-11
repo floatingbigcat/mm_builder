@@ -28,14 +28,13 @@ regarding images column,
 
 ## How to use
 
-### Download the dump file
+### Download and uncompress the dump file
 you can download the dump file from the wiki website, or
 
 ```
 cd your_dump_dir
 wget -i ./data/en_urls.txt
 ```
-### Uncompress the dump file
 modify path in unzip.sh and run
 ```
 bash unzip.sh
