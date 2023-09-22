@@ -12,7 +12,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import argparse
 
-pattern = r'\[\[:?(?:ファイル|画像|File):(.*?)(?:\||\]\])' 
+pattern = r'\[\[:?(?:ファイル|画像|File|Image|图像):(.*?)(?:\||\]\])'
 
 
 def get_parser():
